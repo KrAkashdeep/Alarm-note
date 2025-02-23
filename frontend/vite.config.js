@@ -29,6 +29,17 @@ export default defineConfig({
           },
         ],
       },
+      workbox: {
+        runtimeCaching: [
+          {
+            urlPattern: /\/tasks/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'tasks-cache',
+            }
+          }
+        ]
+      }
     }),
   ],
   publicDir: "public",

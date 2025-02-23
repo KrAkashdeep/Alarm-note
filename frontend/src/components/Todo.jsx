@@ -40,17 +40,29 @@ const Todo = () => {
       );
 
       if (shouldRing && !isRinging) {
+        // Show notification even when app is minimized
+        if (Notification.permission === "granted") {
+          new Notification("Alarm Triggered!", {
+            body: "Your task is due!",
+            icon: "/icons/pwa-192x192.png",
+          });
+        }
         audio.play().catch(console.error);
         setIsRinging(true);
       }
     };
 
-    const timer = setInterval(checkAlarms, 1000);
-    return () => {
-      clearInterval(timer);
-      if (isRinging) stopAlarm();
-    };
-  }, [todos, isRinging, audio]);
+   // Request notification permission
+   if (Notification.permission !== 'granted') {
+    Notification.requestPermission();
+  }
+
+  const timer = setInterval(checkAlarms, 1000);
+  return () => {
+    clearInterval(timer);
+    if (isRinging) stopAlarm();
+  };
+}, [todos, isRinging, audio]);
 
   const addTodo = async (e) => {
     e.preventDefault();
@@ -86,9 +98,7 @@ const Todo = () => {
         ...todoToUpdate,
         completed: !todoToUpdate.completed,
       });
-      setTodos(todos.map((todo) => 
-        todo._id === id ? data : todo
-      ));
+      setTodos(todos.map((todo) => (todo._id === id ? data : todo)));
     } catch (error) {
       console.error("Failed to update task:", error);
     }
@@ -98,9 +108,7 @@ const Todo = () => {
     e.preventDefault();
     try {
       const { data } = await updateTask(edit.id, edit);
-      setTodos(todos.map((todo) => 
-        todo._id === edit.id ? data : todo
-      ));
+      setTodos(todos.map((todo) => (todo._id === edit.id ? data : todo)));
       setEdit({ id: null, text: "", time: "" });
     } catch (error) {
       console.error("Failed to update task:", error);
