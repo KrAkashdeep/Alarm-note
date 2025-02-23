@@ -33,12 +33,20 @@ export default defineConfig({
         runtimeCaching: [
           {
             urlPattern: /\/tasks/,
-            handler: 'NetworkFirst',
+            handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'tasks-cache',
+              backgroundSync: {
+                name: 'tasks-queue',
+                options: {
+                  maxRetentionTime: 24 * 60 // 24 hours
+                }
+              }
             }
           }
-        ]
+        ],
+        clientsClaim: true,
+        skipWaiting: true
       }
     }),
   ],

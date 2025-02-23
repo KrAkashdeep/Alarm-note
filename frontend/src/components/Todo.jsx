@@ -28,41 +28,25 @@ const Todo = () => {
   }, []);
 
   useEffect(() => {
-    const checkAlarms = () => {
-      const now = new Date().toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      });
-
-      const shouldRing = todos.some(
-        (todo) => !todo.completed && todo.time === now
-      );
-
-      if (shouldRing && !isRinging) {
-        // Show notification even when app is minimized
-        if (Notification.permission === "granted") {
-          new Notification("Alarm Triggered!", {
-            body: "Your task is due!",
-            icon: "/icons/pwa-192x192.png",
+    if ("serviceWorker" in navigator && "PeriodicSyncManager" in window) {
+      navigator.serviceWorker.ready.then(async (registration) => {
+        try {
+          await registration.periodicSync.register("alarm-sync", {
+            minInterval: 60 * 1000, // Check every minute
           });
+        } catch (error) {
+          console.log("Periodic sync could not be registered:", error);
         }
-        audio.play().catch(console.error);
-        setIsRinging(true);
-      }
-    };
+      });
+    }
 
-   // Request notification permission
-   if (Notification.permission !== 'granted') {
-    Notification.requestPermission();
-  }
+    // Fallback for browsers without periodic sync
+    const timer = setInterval(() => {
+      navigator.serviceWorker.controller.postMessage({ type: "checkAlarms" });
+    }, 60000);
 
-  const timer = setInterval(checkAlarms, 1000);
-  return () => {
-    clearInterval(timer);
-    if (isRinging) stopAlarm();
-  };
-}, [todos, isRinging, audio]);
+    return () => clearInterval(timer);
+  }, []);
 
   const addTodo = async (e) => {
     e.preventDefault();
