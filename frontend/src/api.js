@@ -1,5 +1,5 @@
 import axios from "axios";
-const api_url = "http://localhost:5000";
+const api_url = "https://alarm-note-backend.vercel.app";
 
 export const addTask = async (post) => {
   try {
