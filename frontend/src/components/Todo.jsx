@@ -15,6 +15,36 @@ const Todo = () => {
   const [isRinging, setIsRinging] = useState(false);
 
   useEffect(() => {
+    const checkAlarms = () => {
+      const now = new Date().toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+
+      const shouldRing = todos.some(
+        (todo) => !todo.completed && todo.time === now
+      );
+
+      if (shouldRing && !isRinging) {
+        audio.play().catch(console.error);
+        setIsRinging(true);
+
+        if (navigator.serviceWorker?.controller) {
+          navigator.serviceWorker.controller.postMessage({
+            type: "alarmTriggered",
+          });
+        }
+      } else if (!shouldRing && isRinging) {
+        stopAlarm(); // Add this condition to stop alarm when no tasks need ringing
+      }
+    };
+
+    const timer = setInterval(checkAlarms, 1000);
+    return () => clearInterval(timer);
+  }, [todos, isRinging, audio]);
+
+  useEffect(() => {
     const fetchTasks = async () => {
       try {
         const { data } = await getTasks();
@@ -27,6 +57,16 @@ const Todo = () => {
     fetchTasks();
   }, []);
 
+  // Add this inside the main component
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("message", (event) => {
+        if (event.data.type === "alarmTriggered") {
+          setIsRinging(true);
+        }
+      });
+    }
+  }, []);
   useEffect(() => {
     if ("serviceWorker" in navigator && "PeriodicSyncManager" in window) {
       navigator.serviceWorker.ready.then(async (registration) => {
@@ -83,6 +123,18 @@ const Todo = () => {
         completed: !todoToUpdate.completed,
       });
       setTodos(todos.map((todo) => (todo._id === id ? data : todo)));
+
+      // Stop alarm if completing the ringing task
+      if (data.completed && isRinging) {
+        const now = new Date().toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        });
+        if (data.time === now) {
+          stopAlarm();
+        }
+      }
     } catch (error) {
       console.error("Failed to update task:", error);
     }
